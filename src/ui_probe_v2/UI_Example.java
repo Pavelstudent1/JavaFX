@@ -9,37 +9,48 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.GridPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.FillRule;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class UI_Example extends Application {
 	
 
+	private static final int MESSAGE_LIST_LIMIT = 100;
 	private File file;
 	private ExecutorService worker;
-	private FutureTask<Boolean> future;
-	private String message;
 	
 	@Override
 	public void init() throws Exception {
 		super.init();
 		file = null;
 		worker = Executors.newCachedThreadPool();
-		message = "Start Words";
 	}
 	
 	
@@ -71,8 +82,41 @@ public class UI_Example extends Application {
 		//progress bar
 		ProgressBar progress = new ProgressBar(0.0);
 		progress.setPrefSize(300, 10);
-		progress.setVisible(true);
+		progress.setVisible(false);
 		grid.add(progress, 0, 3,5,1);
+		
+		ObservableList<String> message_thread = FXCollections.observableArrayList();
+		message_thread.addListener((ListChangeListener<String>) c -> {
+			
+			if (c.getList().size() > MESSAGE_LIST_LIMIT){
+				c.getList().remove(0);
+			}
+		});
+		
+		ListView<String> list_msg_thread = new ListView<>(message_thread);
+		list_msg_thread.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+			
+			@Override
+			public ListCell<String> call(ListView<String> param) {
+				return new ListCell<String>() {
+					
+					@Override
+					protected void updateItem(String item, boolean empty) {
+						if (empty) return;
+						Text txt = new Text(item);
+						switch(item.charAt(0)){
+							case '-': txt.setFill(Color.RED); break;
+							case '+': txt.setFill(Color.GREEN); break;
+							case '@': txt.setFill(Color.BLUE); break;
+							case '!': txt.setFill(Color.BROWN); break;
+							default: txt.setFill(Color.BLACK);
+						}
+						setGraphic(txt);
+					}
+				};
+			}
+		});
+		grid.add(list_msg_thread, 0, 2, 4, 1);
 		
 		
 		
@@ -123,35 +167,49 @@ public class UI_Example extends Application {
 				
 				file = new File(dir_fin);
 				fileChooser.setInitialDirectory(file);
+				pathAccepter.setText(path);
 				pathAccepter.requestFocus();
 			}
 		});
-		
 		
 		Button runButton = new Button("Convert");
 		grid.add(runButton, 3, 1);
 		runButton.setOnAction(new EventHandler<ActionEvent>() {
 			
+			private HeavyTask task = new HeavyTask();
+
 			@Override
 			public void handle(ActionEvent event) {
 			
 				
-//				if (task != null && !task.isDone()){
-//					System.out.println("Work in progress..."); return; 
-//				}else{
-//					System.out.println("Message: " + message);
-//				}
+				if (task.isRunning()){
+					message_thread.add("! Work in progress...");
+					System.out.println("Work in progress..."); return; 
+				}
 				
 				file = new File(pathAccepter.getText());
 				
 				if (file.exists()){
 					System.out.println("File exist!");
-					HeavyTask task = new HeavyTask();
+					message_thread.add("+ Start Converting");
+					task = new HeavyTask();
 					progress.progressProperty().bind(task.progressProperty());
 					progress.visibleProperty().bind(task.runningProperty());
+					
+					ReadOnlyStringProperty message = task.messageProperty();
+					message.addListener(new ChangeListener<String>() {
+
+						@Override
+						public void changed(ObservableValue<? extends String> observable, String oldValue,
+								String newValue) {
+							
+							message_thread.add(newValue);
+						}
+					});
 					worker.submit(task);
 				}else{
 					System.out.println("File doesn't exist here. Try again");
+					message_thread.add("- File doesn't exist here. Try again");
 				}
 			}
 		});
@@ -170,8 +228,6 @@ public class UI_Example extends Application {
 			}
 
 		});
-		
-		
 		
 		
 		primaryStage.setScene(scene);
@@ -204,11 +260,15 @@ public class UI_Example extends Application {
 		protected String call() throws Exception {
 
 			System.out.println("Start HARD WORK: " + Thread.currentThread().getName());
-			for(int i = 0; i < 10000; i++){
+			for(int i = 0; i < 1000; i++){
 				if (isCancelled()) break;
-				updateProgress(i, 10000);
+				updateProgress(i, 1000);
+				if (i % 200 == 0){
+					updateMessage("@ I = " + i);
+				}
 				Thread.sleep(1);
 			}
+			updateMessage("+ End of converting!");
 			System.out.println("END HARD WORK: "  + Thread.currentThread().getName());
 			
 			return "Message from Heavy Task";
