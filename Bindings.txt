@@ -1,0 +1,21 @@
+Various possibility of bindings pane width/height and more...
+
+
+//Bind width and height of FlowPane with width and height of Application Window
+FlowPane layout = new FlowPane();
+layout.prefWidthProperty().bind(stage.widthProperty());
+layout.prefHeightProperty().bind(stage.heightProperty());
+
+
+scene.widthProperty().addListener(new ChangeListener<Number>() {
+	@Override
+	public void changed(
+		ObservableValue<? extends Number> observable, 
+		Number oldValue, Number newValue) {
+		mainPane.setPrefWidth(newValue.doubleValue());
+	}
+});
+
+
+
+https://amyfowlersblog.wordpress.com/
