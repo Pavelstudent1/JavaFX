@@ -19,3 +19,4 @@ scene.widthProperty().addListener(new ChangeListener<Number>() {
 
 
 https://amyfowlersblog.wordpress.com/
+http://www.williamspublishing.com/PDF/978-5-8459-1900-7/part.pdf
