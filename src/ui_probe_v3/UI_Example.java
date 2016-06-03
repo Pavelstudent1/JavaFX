@@ -1,74 +1,47 @@
 package ui_probe_v3;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
-import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.FillRule;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
-import javafx.util.Callback;
 
 public class UI_Example extends Application {
 	
-
-	private static final int MESSAGE_LIST_LIMIT = 100;
-	private File file;
 	private ExecutorService worker;
+	private List<File> queueOfFiles;
+	private HeavyTask2 task2;
+	
+	
+	private EventType<Event> startConverting;
 	
 	@Override
 	public void init() throws Exception {
 		super.init();
-		file = null;
 		worker = Executors.newCachedThreadPool();
+		queueOfFiles = new ArrayList<>();
+		task2 = new HeavyTask2();
 	}
 	
 	
@@ -76,28 +49,52 @@ public class UI_Example extends Application {
 	public void start(Stage primaryStage) {
 		
 		Group root = new Group();
-		Scene scene = new Scene(root);
-		primaryStage.setScene(scene);
-		FlowPane mainPane = createMainPane();
+		primaryStage.setScene(new Scene(root));
 		
-		mainPane.prefWidthProperty().bind(primaryStage.widthProperty());
-		createVBox(mainPane);
-		
+		FlowPane mainPane = createMainPane(primaryStage);
 		root.getChildren().add(mainPane);
+		createPathAccepterField(mainPane, primaryStage);
+		createProgressField(mainPane);
 		
 		
 		primaryStage.show();
 	}
 
 	
-	private void createVBox(FlowPane mainPane) {
-
-		Button b = new Button("Test");
-		Button b2 = new Button("Test2");
-		b.setPrefSize(100, 10);
-		b2.setPrefSize(100, 10);
-		HBox box = new HBox(b,b2);
+	private void createProgressField(FlowPane mainPane) {
+		ProgressBar progress = new ProgressBar();
+		progress.prefWidthProperty().bind(mainPane.widthProperty().subtract(25));
+		task2.bindWith(progress);
+		
+		HBox box = new HBox(progress);
 		box.prefWidthProperty().bind(mainPane.widthProperty());
+		box.setStyle("-fx-background-color: b2cbe6;");
+		box.setVisible(true);
+		box.setPadding(new Insets(5,5,5,5));
+		box.setAlignment(Pos.CENTER_LEFT);
+		
+		mainPane.getChildren().add(box);
+	}
+
+	private void createPathAccepterField(FlowPane mainPane, Stage primaryStage) {
+
+		Button button_convertStart = createConvertButton();
+		TextField pathAccepter = createPathAccepter();
+		Button button_openFiles = createChooseFileButton(primaryStage, pathAccepter);
+		
+		HBox box = new HBox(pathAccepter, button_openFiles, button_convertStart);
+		box.addEventHandler(startConverting, new EventHandler<Event>() {
+
+			@Override
+			public void handle(Event event) {
+				if (event.getEventType().getName().equals(button_convertStart.getId())){
+					System.out.println("Start convert by ENTER");
+					button_convertStart.fire();
+				}
+			}
+		});
+		box.prefWidthProperty().bind(mainPane.widthProperty());
+		box.setAlignment(Pos.CENTER_LEFT);
 		box.setSpacing(5.0);
 		box.setPadding(new Insets(5,5,5,5));
 		box.setStyle("-fx-background-color: DAE6F3;");
@@ -105,19 +102,88 @@ public class UI_Example extends Application {
 		mainPane.getChildren().add(box);
 	}
 
+	private Button createConvertButton() {
+		Button convert = new Button("Convert");
+		convert.setId("button_convert");
+		convert.setOnAction(event -> {
+			if (queueOfFiles.isEmpty()){
+				System.out.println("Haven't files to convert");
+			}else{
+				System.out.println("Start convert");
+				task2.setFiles(queueOfFiles);
+				worker.submit(task2);
+			}
+			queueOfFiles = new ArrayList<>();
+		});
+		startConverting = new EventType<>(convert.getId());
 
-	private FlowPane createMainPane() {
+		return convert;
+	}
+	
+	private Button createChooseFileButton(Stage primaryStage, TextField pathAccepter) {
+		Button open = new Button("Open");
+		open.setId("button_open");
+		open.setOnAction(new EventHandler<ActionEvent>() {
+			
+			private final FileChooser fchooser = new FileChooser();
+			{
+				fchooser.getExtensionFilters().add(new ExtensionFilter("VCF", "*.vcf", "*.gz"));
+			}
+			
+			@Override
+			public void handle(ActionEvent event) {
+				List<File> files = fchooser.showOpenMultipleDialog(primaryStage);
+				if (files == null){
+					pathAccepter.setText("Nothing was choosen");
+				}else{
+					queueOfFiles.addAll(files);
+					pathAccepter.setText(files.size() + " file(s) was choosen");
+				}
+				
+				String lastDirEntered = extractLastEnteredDirectory(files);
+				pathAccepter.setText(lastDirEntered);
+				fchooser.setInitialDirectory(new File(lastDirEntered));
+				pathAccepter.requestFocus();
+			}
+		});
+		
+		return open;
+	}
+	
+	private String extractLastEnteredDirectory(List<File> paths) {
+		StringBuilder sb = new StringBuilder(paths.get(0).getPath());
+		for(int i = sb.length() - 1; i > 0 ; i--){
+			if (sb.charAt(i) == (char)92){ break; }
+			sb.deleteCharAt(i);
+		}
+
+		return sb.toString();
+	}
+
+	private TextField createPathAccepter() {
+		TextField pathAccepter = new TextField("Enter path to file(s) here");
+		pathAccepter.setId("txtFld_pathAccepter");
+		pathAccepter.setOnMouseClicked(event -> pathAccepter.setText(""));
+		pathAccepter.setOnKeyPressed(event -> {
+			if (event.getCode() == KeyCode.ENTER){
+				Event.fireEvent(pathAccepter, new Event(startConverting));
+				pathAccepter.setText("");
+			}
+		});
+		
+		return pathAccepter;
+	}
+
+	private FlowPane createMainPane(Stage primaryStage) {
+
 
 		FlowPane pane = new FlowPane();
 		pane.setMinSize(400, 200);
+		pane.prefWidthProperty().bind(primaryStage.widthProperty());
 		
 		return pane;
 	}
 	
-	
-	
-
-
 	@Override
 	public void stop() throws Exception {
 		super.stop();
@@ -154,6 +220,39 @@ public class UI_Example extends Application {
 			
 			return "Message from Heavy Task";
 		}
+		
+	}
+	
+	class HeavyTask2 extends Task<String>{
+		
+		private List<File> files;
+
+		public void setFiles(List<File> files) {
+			this.files = files;
+		}
+		
+		public void bindWith(ProgressBar progress){
+			progress.progressProperty().bind(this.progressProperty());
+			progress.visibleProperty().bind(this.runningProperty());
+		}
+		
+		@Override
+		protected String call() throws Exception {
+			
+			int num = 1;
+			for (File file : files) {
+				System.out.println("Heavy task #" + num++);
+				Thread.sleep(2000);
+			}
+			System.out.println("Done");
+			return "DONE";
+		}
+		
+	}
+	
+	private void startConverting(){
+		
+		
 		
 	}
 }
