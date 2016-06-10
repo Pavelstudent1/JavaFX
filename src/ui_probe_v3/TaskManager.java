@@ -24,7 +24,7 @@ public class TaskManager implements Closeable {
 	
 	
 	public TaskManager() {
-		this(Executors.newCachedThreadPool());
+		this(Executors.newSingleThreadExecutor());
 	}
 	
 	public TaskManager(ExecutorService outer){

@@ -3,10 +3,15 @@ package ui_probe_v3;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.Stage;
 
 public class UI_Example extends Application {
+	
+	public static final double DEF_WINDOW_WIDTH = 400;
+	public static final double DEF_WINDOW_HEIGHT = 300;
 	
 	private TaskManager taskManager;
 	
@@ -23,12 +28,21 @@ public class UI_Example extends Application {
 		primaryStage.setScene(new Scene(root));
 		
 		FlowPane mainPane = createMainPane(primaryStage);
-		root.getChildren().add(mainPane);
 		mainPane.getChildren().addAll(
 				new FirstBand(primaryStage, mainPane, taskManager).getBand(),
 				new SecondBand(mainPane, taskManager).getBand()
 				);
 		
+		TabPane tabs = new TabPane();
+		tabs.prefWidthProperty().bind(primaryStage.widthProperty());
+		
+		Tab tab1 = new Tab("Main", mainPane);
+		Tab tab2 = new Tab("Log");
+		tabs.getTabs().addAll(tab1, tab2);
+		
+		root.getChildren().add(tabs);
+		primaryStage.setWidth(DEF_WINDOW_WIDTH);
+		primaryStage.setHeight(DEF_WINDOW_HEIGHT);
 		primaryStage.show();
 	}
 
