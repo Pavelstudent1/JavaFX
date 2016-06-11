@@ -26,7 +26,9 @@ public class FirstBand {
 	private Pane mainPane;
 	private TaskManager taskManager;
 	
-	private EventType<Event> startConverting;
+	private static EventType<Event> startConvert = new EventType<>("Convert");
+	private static EventType<Event> clearTextField = new EventType<>("ClearTextField");
+	
 	private List<File> queueOfFiles;
 	private HBox box;
 
@@ -49,16 +51,10 @@ public class FirstBand {
 		Button button_openFiles = createChooseFileButton(primStage, pathAccepter);
 		
 		box = new HBox(pathAccepter, button_openFiles, button_convertStart);
-		box.addEventHandler(startConverting, new EventHandler<Event>() {
-
-			@Override
-			public void handle(Event event) {
-				if (event.getEventType().getName().equals(button_convertStart.getId())){
-					System.out.println("Start convert by ENTER");
-					button_convertStart.fire();
-				}
-			}
-		});
+		
+		box.addEventFilter(startConvert, event -> button_convertStart.fire());
+		box.addEventFilter(clearTextField, event -> pathAccepter.setText(""));
+		
 		box.prefWidthProperty().bind(mainPane.widthProperty());
 		box.setAlignment(Pos.CENTER_LEFT);
 		box.setSpacing(5.0);
@@ -77,8 +73,8 @@ public class FirstBand {
 				taskManager.startSerialWork(queueOfFiles);
 			}
 			queueOfFiles = new ArrayList<>();
+			Event.fireEvent(convert, new Event(clearTextField));
 		});
-		startConverting = new EventType<>(convert.getId());
 		taskManager.addButtonToDisable(convert);
 
 		return convert;
@@ -91,7 +87,7 @@ public class FirstBand {
 			
 			private final FileChooser fchooser = new FileChooser();
 			{
-				fchooser.getExtensionFilters().add(new ExtensionFilter("VCF", "*.vcf", "*.gz"));
+				fchooser.getExtensionFilters().add(new ExtensionFilter("VCF", "*.vcf", "*.gz", "*.rar"));
 			}
 			
 			@Override
@@ -132,7 +128,10 @@ public class FirstBand {
 		pathAccepter.setOnMouseClicked(event -> pathAccepter.setText(""));
 		pathAccepter.setOnKeyPressed(event -> {
 			if (event.getCode() == KeyCode.ENTER){
-				Event.fireEvent(pathAccepter, new Event(startConverting));
+				//send command "Convert" to itself, because it will be intercepted
+				//by Box that consist TextField and Buttons
+//				Event.fireEvent(pathAccepter, new Event(startConverting)); 
+				Event.fireEvent(pathAccepter, new Event(startConvert)); 
 				pathAccepter.setText("");
 			}
 		});

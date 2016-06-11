@@ -5,11 +5,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker.State;
 import javafx.scene.control.Button;
 import javafx.scene.control.ProgressBar;
 
@@ -17,10 +21,9 @@ import javafx.scene.control.ProgressBar;
 public class TaskManager implements Closeable {
 	
 	private ExecutorService service;
-	private List<File> list;
 	private Task<Boolean> task;
 	private List<Button> disabledButtons;
-	private ProgressBar progressBar;
+	private Optional<ProgressBar> progressBar;
 	
 	
 	public TaskManager() {
@@ -28,43 +31,8 @@ public class TaskManager implements Closeable {
 	}
 	
 	public TaskManager(ExecutorService outer){
-		list = null;
 		service = outer;
-		progressBar = null;
 		disabledButtons = new ArrayList<>();
-		createTask();
-	}
-	
-	private void createTask(){
-		task = new Task<Boolean>(){
-
-			@Override
-			protected Boolean call() throws Exception {
-				
-				disabledButtons.stream().forEach(b -> b.setDisable(true));
-				
-				int num = 1;
-				updateProgress(0.01, 10.0);	//need to set progress visible, but visibly empty
-				for (File file : list) {
-					System.out.println("Heavy task #" + num);
-					runLongWork(); //Create and run outer task 
-					updateProgress(num, list.size());
-					++num;
-				}
-				System.out.println("Done");
-				
-				list = null;
-				disabledButtons.stream().forEach(b -> b.setDisable(false));
-				return true;
-			}
-
-		};
-		
-		if (progressBar != null){
-			progressBar.progressProperty().bind(task.progressProperty());
-			progressBar.visibleProperty().bind(task.runningProperty());
-		}
-		
 	}
 	
 	private void runLongWork() throws InterruptedException {
@@ -72,7 +40,7 @@ public class TaskManager implements Closeable {
 	}
 	
 	public void bindProgressBar(ProgressBar progress){
-		progressBar = progress;
+		progressBar = Optional.ofNullable(progress);
 	}
 	
 	public void addButtonToDisable(Button button){
@@ -80,8 +48,24 @@ public class TaskManager implements Closeable {
 	}
 	
 	public void startSerialWork(List<File> data){
-		list = data;
-		createTask();
+		disabledButtons.stream().forEach(b -> b.setDisable(true));
+		task = new LongWorkTaskWrapper(data);
+		task.stateProperty().addListener(
+				(ChangeListener<State>) (observable, oldValue, newValue) -> {
+						switch(newValue){
+						case SUCCEEDED:
+						case FAILED:
+							disabledButtons.stream().forEach(b -> b.setDisable(false));
+							break;
+						default:
+							break;
+						}
+						System.out.println(newValue.name());
+		});
+		progressBar.ifPresent(p -> {
+			p.progressProperty().bind(task.progressProperty());
+			p.visibleProperty().bind(task.runningProperty());
+		});
 		service.submit(task);
 	}
 	
@@ -94,6 +78,33 @@ public class TaskManager implements Closeable {
 			System.out.println("Task doesn't close in proper time");
 			e.printStackTrace();
 		}
+	}
+	
+	private class LongWorkTaskWrapper extends Task<Boolean>{
+		
+		private List<File> files;
+		
+		public LongWorkTaskWrapper(List<File> data) {
+			files = data;
+		}
+		
+		@Override
+		protected Boolean call() throws Exception {
+			
+			int num = 1;
+			updateProgress(0.01, 10.0);	//need to set progress visible, but visibly empty
+			for (File file : files) {
+				System.out.println("Heavy task #" + num);
+				runLongWork(); //Create and run outer task 
+//				if (num == 2) throw new NullPointerException();
+				updateProgress(num, files.size());
+				++num;
+			}
+			System.out.println("Done");
+			
+			return true;
+		}
+		
 	}
 	
 }

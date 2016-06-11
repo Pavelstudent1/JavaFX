@@ -36,7 +36,8 @@ public class UI_Example extends Application {
 		TabPane tabs = new TabPane();
 		tabs.prefWidthProperty().bind(primaryStage.widthProperty());
 		
-		Tab tab1 = new Tab("Main", mainPane);
+		Tab tab1 = new Tab("Main");
+		tab1.setContent(mainPane);
 		Tab tab2 = new Tab("Log");
 		tabs.getTabs().addAll(tab1, tab2);
 		
