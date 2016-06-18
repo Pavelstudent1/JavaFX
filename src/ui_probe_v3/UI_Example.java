@@ -6,6 +6,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 public class UI_Example extends Application {
@@ -27,10 +28,10 @@ public class UI_Example extends Application {
 		Group root = new Group();
 		primaryStage.setScene(new Scene(root));
 		
-		FlowPane mainPane = createMainPane(primaryStage);
+		Pane mainPane = createMainPane(primaryStage);
 		mainPane.getChildren().addAll(
-				new FirstBand(primaryStage, mainPane, taskManager).getBand(),
-				new SecondBand(mainPane, taskManager).getBand()
+				new InputFileBand(primaryStage, mainPane, taskManager).getBand(),
+				new ProgressBand(mainPane, taskManager).getBand()
 				);
 		
 		TabPane tabs = new TabPane();
@@ -42,6 +43,9 @@ public class UI_Example extends Application {
 		tabs.getTabs().addAll(tab1, tab2);
 		
 		root.getChildren().add(tabs);
+		
+		primaryStage.setMinWidth(mainPane.getMinWidth());
+		primaryStage.setMinHeight(mainPane.getMinHeight());
 		primaryStage.setWidth(DEF_WINDOW_WIDTH);
 		primaryStage.setHeight(DEF_WINDOW_HEIGHT);
 		primaryStage.show();
@@ -50,7 +54,7 @@ public class UI_Example extends Application {
 	private FlowPane createMainPane(Stage primaryStage) {
 
 		FlowPane pane = new FlowPane();
-		pane.setMinSize(400, 200);
+		pane.setMinSize(300, 200);
 		pane.prefWidthProperty().bind(primaryStage.widthProperty());
 		
 		return pane;

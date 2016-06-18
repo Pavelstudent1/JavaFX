@@ -53,12 +53,12 @@ public class TaskManager implements Closeable {
 		task.stateProperty().addListener(
 				(ChangeListener<State>) (observable, oldValue, newValue) -> {
 						switch(newValue){
-						case SUCCEEDED:
-						case FAILED:
-							disabledButtons.stream().forEach(b -> b.setDisable(false));
-							break;
-						default:
-							break;
+							case SUCCEEDED:
+							case FAILED:
+								disabledButtons.stream().forEach(b -> b.setDisable(false));
+								break;
+							default:
+								break;
 						}
 						System.out.println(newValue.name());
 		});

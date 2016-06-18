@@ -7,14 +7,14 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 
-public class SecondBand {
+public class ProgressBand {
 	
 	private ProgressBar progress;
 	private Pane mainPane;
 	private TaskManager taskManager;
 	private HBox box;
 
-	public SecondBand(Pane mainPane, TaskManager taskManager) {
+	public ProgressBand(Pane mainPane, TaskManager taskManager) {
 		this.mainPane = mainPane;
 		this.taskManager = taskManager;
 		init();

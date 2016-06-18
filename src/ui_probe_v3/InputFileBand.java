@@ -20,7 +20,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
-public class FirstBand {
+public class InputFileBand {
 	
 	private Stage primStage;
 	private Pane mainPane;
@@ -32,7 +32,7 @@ public class FirstBand {
 	private List<File> queueOfFiles;
 	private HBox box;
 
-	public FirstBand(Stage primStage, Pane mainPane, TaskManager taskManager){
+	public InputFileBand(Stage primStage, Pane mainPane, TaskManager taskManager){
 		this.primStage = primStage;
 		this.mainPane = mainPane;
 		this.taskManager = taskManager;
@@ -52,6 +52,7 @@ public class FirstBand {
 		
 		box = new HBox(pathAccepter, button_openFiles, button_convertStart);
 		
+		//intercepting global events at "capturing phase"
 		box.addEventFilter(startConvert, event -> button_convertStart.fire());
 		box.addEventFilter(clearTextField, event -> pathAccepter.setText(""));
 		
@@ -97,6 +98,7 @@ public class FirstBand {
 					pathAccepter.setText("Nothing was choosen");
 					return;
 				}else{
+					if (!queueOfFiles.isEmpty()) queueOfFiles.clear(); 
 					queueOfFiles.addAll(files);
 					pathAccepter.setText(files.size() + " file(s) was choosen");
 				}
