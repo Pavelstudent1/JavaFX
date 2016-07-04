@@ -132,9 +132,9 @@ public class InputFileBand {
 			if (event.getCode() == KeyCode.ENTER){
 				//send command "Convert" to itself, because it will be intercepted
 				//by Box that consist TextField and Buttons
-//				Event.fireEvent(pathAccepter, new Event(startConverting)); 
-				Event.fireEvent(pathAccepter, new Event(startConvert)); 
-				pathAccepter.setText("");
+//TODO: implement checking validity AND accepting of entered path to 'queue of files' !
+				Event.fireEvent(pathAccepter, new Event(startConvert));
+//				pathAccepter.setText("");
 			}
 		});
 		
