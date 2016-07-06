@@ -43,8 +43,8 @@ public class CParser {
 		}
 	}
 	
-	public Object getData(String name){
-		return map.get(name).getData();
+	public <T> T getData(String name, Class<T> type){
+		return type.cast(map.get(name).getData());
 	}
 	
 }
